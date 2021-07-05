@@ -11,6 +11,8 @@ from keras.layers import Dense, Dropout, Flatten
 from sklearn.model_selection import StratifiedKFold
 import sklearn.metrics as skm
 
+from keras.models import model_from_json
+
 def windows(data, window_size):
   start = 0
   while start < len(data):
@@ -42,10 +44,13 @@ def extract_features( sub_dirs, file_ext="*.wav"):
   return np.array(features), np_labels
 
 def load_data():
+  '''
   tr_sub_dirs = ["0", "1"]
+  #tr_sub_dirs = ["aedes_aegypti", "aedes_albopictus"]
   tr_features, tr_labels = extract_features(tr_sub_dirs)
   np.savez(file_url, tr_features, tr_labels)
   return tr_features, tr_labels
+  '''
   # Comment the above code and use the code below to not process the files again
   npread = np.load(file_url + '.npz')
   return npread['arr_0'], npread['arr_1']
@@ -68,7 +73,18 @@ def create_model():
   return model
 
 def train_and_evaluate_model(model, xtrain, ytrain, xval, yval):
-  model.fit(xtrain, ytrain,  batch_size=32, epochs=10, verbose=2)
+  fit_now = False
+  if (fit_now):
+    model.fit(xtrain, ytrain,  batch_size=32, epochs=10, verbose=2)
+    with open(os.path.join(file_url,"model_binary.json"), "w") as json_file:
+      model_json = model.to_json()
+      json_file.write(model_json)
+  else: 
+    with open('model.json', 'r') as json_file:
+      loaded_model_json = json_file.read()
+      json_file.close()
+      model = model_from_json(loaded_model_json)
+
   y_predicted_classes = model.predict_classes(xval)
   y_predicted_probability = model.predict(xval)
   conf_matrix = skm.confusion_matrix(yval, y_predicted_classes, labels=[1, 0])
@@ -89,7 +105,7 @@ def train_and_evaluate_model(model, xtrain, ytrain, xval, yval):
 seed = 123
 np.random.seed(seed)  # for reproducibility
 
-file_url = 'E:\\mosquitos\\train'
+file_url = 'T:\\mosquitos\\train'
 
 bands = 60
 frames = 40
